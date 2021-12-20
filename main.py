@@ -113,6 +113,7 @@ class MainWindow(QMainWindow):
 
         self.output = QPlainTextEdit()
         layout.addWidget(self.output)
+        self.corpus, self.labels = loadCorpus()  # loadCorpusMock()
 
     def search(self):
         try:
@@ -122,8 +123,7 @@ class MainWindow(QMainWindow):
             n = int(self.nInput.text())
             question = self.searchbox.text().lower()
             sse = SemanticSearchEngine(distance, vectortype, da, n)
-            corpus, labels = loadCorpus() # loadCorpusMock()
-            sse.loadData(corpus, labels)
+            sse.loadData(self.corpus, self.labels)
             answer = sse.answerQuestion(question)
             self.output.setPlainText(answer)
         except Exception as e:
