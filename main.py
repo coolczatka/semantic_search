@@ -2,7 +2,8 @@ from PyQt5.QtWidgets import QMainWindow, QHBoxLayout, QLineEdit, QPushButton, QW
     QApplication, QPlainTextEdit, QGridLayout, QLabel
 import sys, traceback
 from SemanticSearchEngine import SemanticSearchEngine
-
+import re
+from xml.etree.ElementTree import iterparse
 
 def loadCorpusMock():
     ye = open('YorkEngland.txt', 'r')
@@ -16,6 +17,48 @@ def loadCorpusMock():
     ny.close()
     return [yeText, yaText, nyText], ['YorkEngland', 'YorkAustraila', 'NewYork']
 
+def loadCorpus():
+    file_path = r"./enwiki-20211201-pages-articles-multistream.xml"
+    corpus = []
+    title = []
+    page_flag = False
+    title_good = False
+    counter = 0
+    print("--parsing start--")
+
+    for event, elem in iterparse(file_path, events=("start", "end")):
+        if elem.tag == "{http://www.mediawiki.org/xml/export-0.10/}page" and event == "start":
+            page_flag = True
+        if page_flag:
+            if elem.tag == "{http://www.mediawiki.org/xml/export-0.10/}title" and event == "end":
+                title_good = True
+                title.append(elem.text)
+            if elem.tag == "{http://www.mediawiki.org/xml/export-0.10/}text" and event == "end":
+                parsed = elem.text
+                if parsed.startswith('#REDIRECT'):
+                    title.pop()
+                else:
+                    parsed = re.sub("\{\{.*?\}\}", "", parsed)
+                    parsed = re.sub("\n", "", parsed)
+                    parsed = parsed.split("==")[0]
+                    parsed = re.sub("\\'", "", parsed)
+                    parsed = re.sub("(\[\[Category\:.*?\]\])|(\[\[File\:.*?\]\])", "", parsed)
+                    parsed = re.sub("\[\[", "", parsed)
+                    parsed = re.sub("\|.*?\]\]", "", parsed)
+                    parsed = re.sub("\]\]", "", parsed)
+                    parsed = re.sub("\<\!\-\-.*?\-\-\>", "", parsed)
+                    parsed = re.sub("\<ref\>.*?\<\/ref\>", "", parsed)
+                    # parsed = re.sub("\=\= See also \=\=.*", "aa", parsed)
+                    corpus.append(parsed.lower())
+        if elem.tag == "{http://www.mediawiki.org/xml/export-0.10/}page" and event == "end":
+            counter += 1
+            page_flag = False
+            title_good = False
+        if counter > 5000:
+            break
+    print("--parsing end: ", len(title), " records--")
+
+    return corpus, title
 
 class MainWindow(QMainWindow):
 
@@ -79,7 +122,7 @@ class MainWindow(QMainWindow):
             n = int(self.nInput.text())
             question = self.searchbox.text().lower()
             sse = SemanticSearchEngine(distance, vectortype, da, n)
-            corpus, labels = loadCorpusMock()
+            corpus, labels = loadCorpus() # loadCorpusMock()
             sse.loadData(corpus, labels)
             answer = sse.answerQuestion(question)
             self.output.setPlainText(answer)
