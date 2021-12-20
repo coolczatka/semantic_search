@@ -81,7 +81,7 @@ class MainWindow(QMainWindow):
             sse = SemanticSearchEngine(distance, vectortype, da, n)
             corpus, labels = loadCorpusMock()
             sse.loadData(corpus, labels)
-            answer = sse.askQuestion(question)
+            answer = sse.answerQuestion(question)
             self.output.setPlainText(answer)
         except Exception as e:
             print(traceback.format_exc())
